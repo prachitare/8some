@@ -1,27 +1,43 @@
+from flask import Flask, render_template, url_for, request, redirect
+from werkzeug import secure_filename
 import os
-from flask import Flask, request, redirect, url_for
-from werkzeug.utils import secure_filename
+import img_operation
 
-UPLOAD_FOLDER = '/home/prachi/Desktop/Script/static'
-ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
+IMAGE_FOLDER = os.path.join('static', 'photos')
+file_name = 1
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['UPLOAD_FOLDER'] = IMAGE_FOLDER
 
-def upload_file():
-    if request.method == 'POST':
-        # check if the post request has the file part
-        if 'file' not in request.files:
-            flash('No file part')
-            return redirect(request.url)
-        file = request.files['file']
-        # if user does not select file, browser also
-        # submit a empty part without filename
-        if file.filename == '':
-            flash('No selected file')
-            return redirect(request.url)
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+@app.route('/')
+def home():
+	return render_template('home.html')
 
+@app.route('/upload')
+def upload():
+	return render_template('upload.html')
 
+@app.route('/uploader', methods = ['GET', 'POST'])
+def uploader():
+	if request.method == 'POST':
+		f = request.files['imgfile']
+		global imgname
+		imgname = secure_filename(f.filename)
+		extension = os.path.splitext(imgname)[1][1:]
+		imgname = 'image.'+extension
+		imgpath = 'static/photos/output_'+imgname
+		f.save(imgpath)
+		#img_operation.squarefit(imgpath)
+		img_operation.greyscale(imgpath)
+		imgname = 'img.'+extension
+		return redirect('show')	
+
+@app.route('/show')
+def show():
+	full_filename = os.path.join(app.config['UPLOAD_FOLDER'], 'output_'+imgname)
+	masked_image = full_filename
+	print masked_image
+	return render_template('show.html', user_image = masked_image)
+
+if __name__ == '__main__':
+    app.run(debug = True)
